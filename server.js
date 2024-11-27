@@ -9,6 +9,8 @@ app.get("/", function (req, res) {
   res.send("Welcome To MY Hotel , How Can I help You");
 });
 
+// hel
+
 // app.post("/person", (req, res) => {
 //   const data = req.body;
 
