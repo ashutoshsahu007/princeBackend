@@ -3,39 +3,53 @@ const app = express();
 const db = require("./db");
 require("dotenv").config();
 const PORT = process.env.PORT || 3000;
+const passport = require("passport");
+const LocalStrategy = require("passport-local").Strategy;
+const Person = require("./models/Person");
 
 const bodyParser = require("body-parser");
 app.use(bodyParser.json()); // req.body
 
-app.get("/", function (req, res) {
-  res.send("Welcome To MY Hotel , How Can I help You");
-});
+const logRequest = (req, res, next) => {
+  console.log(
+    `[${new Date().toLocaleString()}] Request Made to : ${req.originalUrl}`
+  );
+  next(); // move on to next phase
+};
 
-// hel
+passport.use(
+  new LocalStrategy(async (USERNAME, password, done) => {
+    // authentication logic here
+    try {
+      console.log("Recieved credentials :", USERNAME, password);
+      const user = await Person.findOne({ username: USERNAME });
+      if (!user) {
+        return done(null, false, { message: "Incorrect username" });
+      }
 
-// app.post("/person", (req, res) => {
-//   const data = req.body;
+      const isPasswordMatch = user.password === password ? true : false;
+      if (isPasswordMatch) {
+        return done(null, user);
+      } else {
+        return done(null, false, { message: "Incorrect password" });
+      }
+    } catch (err) {
+      return done(err);
+    }
+  })
+);
 
-//   // create a new person document using Mongoose model
+app.use(passport.initialize());
 
-//   const newPerson = new Person(data);
+app.get(
+  "/",
+  passport.authenticate("local", { session: false }),
+  function (req, res) {
+    res.send("Welcome To MY Hotel , How Can I help You");
+  }
+);
 
-//   // To avoid this we directly pass the data
-//   // newPerson.name = data.name;
-//   // newPerson.age = data.age;
-
-//   // save the new person  to the database
-//   // this were the old practice , so we use async await s
-//   // newPerson.save((error, savedPerson) => {
-//   //   if (error) {
-//   //     console.log("Error saving person ", error);
-//   //     res.status(500).json({ error: "Internal Server Error" });
-//   //   } else {
-//   //     console.log("data saved succesfully");
-//   //     res.status(200).json(savedPerson);
-//   //   }
-//   // });
-// });
+// MiddleWare Function
 
 // Import the router files
 const personRoutes = require("./routes/personRoutes");
@@ -43,7 +57,7 @@ const menuRoutes = require("./routes/menuRoutes");
 
 // Use the routers
 app.use("/person", personRoutes);
-app.use("/menu", menuRoutes);
+app.use("/menu", logRequest, menuRoutes);
 
 app.listen(PORT, () => {
   console.log("Server is listing to port 3000");
